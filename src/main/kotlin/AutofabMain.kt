@@ -52,6 +52,7 @@ class AutofabMain {
 
     fun close() {
         bonjour.close()
+        zmq?.close()
     }
 }
 

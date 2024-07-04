@@ -23,8 +23,10 @@ class RequestReplyTests {
 
     @Test
     fun testDiscovery() {
+        var app: AutofabMain? = null
+
         thread(isDaemon = true) {
-            val app = AutofabMain()
+            app = AutofabMain()
         }
 
         val localhost = InetAddress.getLocalHost()
@@ -60,12 +62,15 @@ class RequestReplyTests {
 
         logger.info("Found hosts: " + hostsFound.joinToString(", ") { it.toString() })
         assert(hostsFound.contains(localhost))
+        app?.close()
     }
 
     @Test
     fun testHello() {
+        var app: AutofabMain? = null
+
         thread(isDaemon = true) {
-            val app = AutofabMain()
+            app = AutofabMain()
         }
 
         val localhost = InetAddress.getLocalHost()
@@ -80,15 +85,18 @@ class RequestReplyTests {
 
             assertEquals(expected = "WORLD", actual = response, "Response to HELLO should be WORLD")
         }
+         app?.close()
     }
 
     @OptIn(ExperimentalEncodingApi::class)
     @Test
     fun testLaunch() {
+        var app: AutofabMain? = null
+
         thread(isDaemon = true) {
-            val app = AutofabMain()
+            app = AutofabMain()
             // host registration needs to be enabled
-            app.enableHostRegistration(true)
+            app?.enableHostRegistration(true)
         }
 
         val localhost = InetAddress.getLocalHost()
@@ -124,6 +132,8 @@ class RequestReplyTests {
             val response = socket.recvStr()
             assertEquals(expected = "LAUNCH EPIC OK", actual = response, "Response to LAUNCH should be EPIC OK")
         }
+
+        app?.close()
     }
 
 }
