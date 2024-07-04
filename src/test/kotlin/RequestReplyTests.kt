@@ -5,6 +5,7 @@ import org.zeromq.SocketType
 import org.zeromq.ZContext
 import org.zeromq.ZMQ
 import java.io.IOException
+import java.net.DatagramSocket
 import java.net.InetAddress
 import java.net.UnknownHostException
 import java.nio.file.Files
@@ -99,24 +100,38 @@ class RequestReplyTests {
             app?.enableHostRegistration(true)
         }
 
-        val localhost = InetAddress.getLocalHost()
+//        System.setProperty("autofab.host", "10.1.2.201")
+        val autofabHost = System.getProperty("autofab.host")
+        logger.info("Local address is ${InetAddress.getLocalHost().hostAddress}")
+        val host = if(autofabHost != null) {
+            logger.info("Autofab host: $autofabHost")
+            InetAddress.getByName(autofabHost)
+            } else {
+            InetAddress.getLocalHost()
+        }
         val tmpDirectory = Files.createTempDirectory("AutofabLaunchTest")
         val km = KeyManager()
         val kp = km.getOwnKeyPair(tmpDirectory)
 
+        var localAddress = "127.0.0.1"
+        DatagramSocket().use { socket ->
+            socket.connect(InetAddress.getByName("8.8.8.8"), 10002)
+            localAddress = socket.localAddress.hostAddress
+        }
+
         ZContext().use { context ->
             // Socket to talk to clients
             val socket: ZMQ.Socket = context.createSocket(SocketType.REQ)
-            socket.connect("tcp://${localhost.hostAddress}:4223")
+            socket.connect("tcp://${host.hostAddress}:4223")
 
             socket.sendMore("REGISTER")
-            socket.sendMore("127.0.0.1")
+            socket.sendMore(localAddress)
             socket.send(Base64.encode(kp.public.encoded))
 
             val registerResponse = socket.recvStr()
             assertEquals(expected = "REGISTER OK", actual = registerResponse, "Response to REGISTER should be REGISTER OK")
 
-            val payload = listOf("127.0.0.1", "2", "open", "/Applications/OmniFocus.app")
+            val payload = listOf(localAddress, "2", "open", "explorer.exe")
             logger.debug("Payload string is ${payload.joinToString("\n")}")
             val signature = KeyManager.sign(kp.private, payload.joinToString("\n").toByteArray())
             socket.sendMore("LAUNCH")

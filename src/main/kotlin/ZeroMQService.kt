@@ -27,7 +27,7 @@ class ZeroMQService(url: String, keyPair: KeyPair, keyManager: KeyManager, confi
 
     val logDirectory = configDirectory.resolve("logs").createDirectories()
 
-    private val logDateFormat: SimpleDateFormat = SimpleDateFormat("yyyy-MM-dd_HH:mm:ss")
+    private val logDateFormat: SimpleDateFormat = SimpleDateFormat("yyyy-MM-dd_HHmmss")
 
     val workerThread: Thread = thread(isDaemon = true) {
         ZContext().use { context ->
