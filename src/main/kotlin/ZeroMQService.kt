@@ -102,9 +102,9 @@ class ZeroMQService(url: String, keyPair: KeyPair, keyManager: KeyManager, confi
                             logger.info("Will launch this command: ${lines.joinToString(" ")}")
 
                             launchedThreads += thread(isDaemon = true) {
-                                val output = lines.runCommand(Paths.get(".").toFile())
                                 val timestamp = Timestamp(System.currentTimeMillis())
                                 val logFile = logDirectory.resolve("$host-${logDateFormat.format(timestamp)}.log")
+                                val output = lines.runCommand(Paths.get(".").toFile(), logFile.toFile())
                                 output?.let { logFile.writeText(it) }
                             }
 
@@ -130,12 +130,12 @@ class ZeroMQService(url: String, keyPair: KeyPair, keyManager: KeyManager, confi
     }
 
     companion object {
-        fun List<String>.runCommand(workingDir: File): String? {
+        fun List<String>.runCommand(workingDir: File, logFile: File): String? {
             try {
                 val proc = ProcessBuilder(this)
                     .directory(workingDir)
-                    .redirectOutput(ProcessBuilder.Redirect.PIPE)
-                    .redirectError(ProcessBuilder.Redirect.PIPE)
+                    .redirectOutput(ProcessBuilder.Redirect.to(logFile))
+                    .redirectError(ProcessBuilder.Redirect.to(logFile))
                     .start()
 
                 //proc.waitFor(60, TimeUnit())
