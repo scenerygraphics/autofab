@@ -83,7 +83,8 @@ class RequestReplyTests {
         Thread.sleep(5000)
 
         assertDoesNotThrow {
-            client.launchOnAvailableHosts("open /Applications/iTerm.app", register = true)
+            client.launchOnAvailableHosts("C:\\Windows\\System32\\calc.exe", register = true, catchErrors = false)
+//            client.launchOnAvailableHosts("open /Applications/iTerm.app", register = true, catchErrors = false)
         }
 
         app?.close()
