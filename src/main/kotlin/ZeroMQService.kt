@@ -7,6 +7,7 @@ import org.zeromq.ZContext
 import org.zeromq.ZMQException
 import java.io.File
 import java.io.IOException
+import java.net.InetAddress
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.KeyPair
@@ -24,6 +25,7 @@ class ZeroMQService(url: String, keyPair: KeyPair, keyManager: KeyManager, confi
     var registerEnabled = false
 
     val launchedThreads = mutableListOf<Thread>()
+    val launchedProcesses = mutableListOf<Process>()
 
     val logDirectory = configDirectory.resolve("logs").createDirectories()
 
@@ -103,12 +105,43 @@ class ZeroMQService(url: String, keyPair: KeyPair, keyManager: KeyManager, confi
 
                             launchedThreads += thread(isDaemon = true) {
                                 val timestamp = Timestamp(System.currentTimeMillis())
-                                val logFile = logDirectory.resolve("$host-${logDateFormat.format(timestamp)}.log")
-                                val output = lines.runCommand(Paths.get(".").toFile(), logFile.toFile())
-                                output?.let { logFile.writeText(it) }
+                                val logDirectory = System.getProperty("autofab.logDirectory")
+                                val logDirectoryPath = if(logDirectory == null) {
+                                    configDirectory.resolve("logs")
+                                } else {
+                                    Paths.get(logDirectory)
+                                }
+                                val logFile = logDirectoryPath.resolve("$host-${InetAddress.getLocalHost().hostName}-${logDateFormat.format(timestamp)}.log")
+                                lines.runCommand(Paths.get(".").toFile(), logFile.toFile())?.let { launchedProcesses.add(it) }
+                                //output?.let { logFile.writeText(it) }
                             }
 
                             sub.send("LAUNCH EPIC OK")
+                        }
+
+                        requestString.startsWith("SHUTDOWN") -> {
+                            launchedProcesses.forEach {
+                                if(it.isAlive) {
+                                    logger.info("Shutting down $it")
+                                    it.destroy()
+                                }
+                            }
+
+                            launchedProcesses.removeIf { !it.isAlive }
+                            sub.send("SHUTDOWN EPIC OK")
+                        }
+
+                        requestString.startsWith("KILL") -> {
+
+                            launchedProcesses.forEach {
+                                if(it.isAlive) {
+                                    logger.info("Killing down $it")
+                                    it.destroyForcibly()
+                                }
+                            }
+
+                            launchedProcesses.removeIf { !it.isAlive }
+                            sub.send("KILL EPIC OK")
                         }
 
                         requestString.startsWith("HELLO") -> {
@@ -130,7 +163,7 @@ class ZeroMQService(url: String, keyPair: KeyPair, keyManager: KeyManager, confi
     }
 
     companion object {
-        fun List<String>.runCommand(workingDir: File, logFile: File): String? {
+        fun List<String>.runCommand(workingDir: File, logFile: File): Process? {
             try {
                 val proc = ProcessBuilder(this)
                     .directory(workingDir)
@@ -141,7 +174,7 @@ class ZeroMQService(url: String, keyPair: KeyPair, keyManager: KeyManager, confi
                 //proc.waitFor(60, TimeUnit())
                 Thread.sleep(60)
 
-                return proc.inputStream.bufferedReader().readText()
+                return proc
             } catch(e: IOException) {
                 e.printStackTrace()
                 return null
