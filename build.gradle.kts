@@ -2,10 +2,11 @@ plugins {
     kotlin("jvm") version "2.0.0"
     application
     id("com.github.johnrengelman.shadow") version "8.1.1"
+    `maven-publish`
 }
 
 group = "graphics.scenery"
-version = "0.1-SNAPSHOT"
+version = "0.1"
 
 repositories {
     mavenCentral()
@@ -27,6 +28,23 @@ application {
 tasks.test {
     useJUnitPlatform()
 }
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
 kotlin {
     jvmToolchain(21)
+}
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            groupId = "graphics.scenery"
+            artifactId = "autofab"
+            version = "0.1"
+
+            from(components["java"])
+        }
+    }
 }
