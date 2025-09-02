@@ -103,8 +103,8 @@ signing {
 
 nmcpAggregation {
     centralPortal {
-        username = properties["sonatypeUsername"] as String
-        password = properties["sonatypePassword"] as String
+        username = (properties["sonatypeUsername"] as? String) ?: ""
+        password = (properties["sonatypePassword"] as? String) ?: ""
         // publish manually from the portal
         publishingType = "USER_MANAGED"
     }
